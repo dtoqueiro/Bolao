@@ -1,0 +1,218 @@
+"""
+Ponto de entrada da aplicação Streamlit.
+
+Gerencia o estado da sessão e o roteamento entre as telas de Login,
+Votação e Painel Admin.
+"""
+import streamlit as st
+
+from src.repositories.memory_repository import MemoryRepository
+from src.services.auth_service import AuthService
+from src.services.votacao_service import VotacaoService
+from src.services.engine_service import EngineService
+from src.models.participante import Participante
+from src.models.voto import Voto
+
+# Configuração da página (deve ser a primeira chamada Streamlit)
+st.set_page_config(
+    page_title="Bolão Lotofácil",
+    page_icon="🍀",
+    layout="centered"
+)
+
+
+def inicializar_estado():
+    """Inicializa as variáveis de sessão (Session State)."""
+    if "repo" not in st.session_state:
+        # Por enquanto usamos o repositório em memória
+        repo = MemoryRepository()
+        
+        # Se for teste, popula o repo com dados falsos
+        if st.session_state.get("_test_mode", False):
+            repo.add_participante(Participante("João Silva", "11999998888", "Pendente", "Participante"))
+            repo.add_participante(Participante("Admin", "00000000000", "Pendente", "Admin"))
+            
+        st.session_state["repo"] = repo
+
+    if "auth_service" not in st.session_state:
+        st.session_state["auth_service"] = AuthService(st.session_state["repo"])
+        
+    if "votacao_service" not in st.session_state:
+        st.session_state["votacao_service"] = VotacaoService(st.session_state["repo"])
+        
+    if "engine_service" not in st.session_state:
+        st.session_state["engine_service"] = EngineService()
+
+    if "usuario_logado" not in st.session_state:
+        st.session_state["usuario_logado"] = None
+
+
+def render_login():
+    """Renderiza a tela de login."""
+    st.header("🍀 Bolão Lotofácil")
+    st.subheader("Identificação")
+    
+    st.markdown("Bem-vindo! Por favor, identifique-se usando seu **telefone** ou **nome completo**.")
+    
+    identificacao = st.text_input("Telefone ou Nome:")
+    
+    if st.button("Entrar"):
+        if not identificacao:
+            st.error("Por favor, digite seu telefone ou nome.")
+            return
+            
+        auth: AuthService = st.session_state["auth_service"]
+        
+        # Tenta por telefone primeiro se tiver só números ou começar com formato de telefone
+        # Uma heurística simples: se tiver números suficientes, tenta telefone
+        tem_numeros = any(c.isdigit() for c in identificacao)
+        
+        if tem_numeros:
+            resultado = auth.login_por_telefone(identificacao)
+            # Fallback: se não achar por telefone, tenta por nome (pode ser um nome com número? Raro, mas possível)
+            if not resultado.sucesso and "não cadastrado" in resultado.mensagem.lower():
+                resultado_nome = auth.login_por_nome(identificacao)
+                if resultado_nome.sucesso or "já votou" in resultado_nome.mensagem.lower():
+                    resultado = resultado_nome
+        else:
+            resultado = auth.login_por_nome(identificacao)
+            
+        if resultado.sucesso:
+            st.session_state["usuario_logado"] = resultado.participante
+            st.success(resultado.mensagem)
+            st.rerun()
+        else:
+            if "já votou" in resultado.mensagem.lower():
+                st.warning(resultado.mensagem)
+            else:
+                st.error(resultado.mensagem)
+
+
+def render_votacao():
+    """Renderiza a cédula de votação."""
+    usuario: Participante = st.session_state["usuario_logado"]
+    
+    col1, col2 = st.columns([0.8, 0.2])
+    with col1:
+        st.header("Cédula de Votação")
+        st.markdown(f"👤 Conectado como: **{usuario.nome}**")
+    with col2:
+        if st.button("Sair"):
+            st.session_state["usuario_logado"] = None
+            st.rerun()
+            
+    if usuario.ja_votou():
+        st.success("✅ Você já registrou seu voto! Aguarde o encerramento do bolão.")
+        return
+        
+    st.subheader("Escolha suas dezenas")
+    st.markdown("Regras: 1 a 5 favoritas, 0 a 3 indesejadas. Não pode haver interseção.")
+    
+    dezenas = list(range(1, 26))
+    
+    positivas = st.multiselect(
+        "Dezenas Favoritas (+1 ponto)", 
+        options=dezenas,
+        help="Escolha de 1 a 5 dezenas que você quer muito que estejam nos jogos."
+    )
+    
+    negativas = st.multiselect(
+        "Dezenas Indesejadas (-1 ponto)", 
+        options=dezenas,
+        help="Escolha de 0 a 3 dezenas que você prefere que fiquem de fora."
+    )
+    
+    if st.button("Confirmar Voto", type="primary"):
+        votacao: VotacaoService = st.session_state["votacao_service"]
+        resultado = votacao.registrar_voto(
+            telefone_limpo=usuario.telefone,
+            dezenas_positivas=positivas,
+            dezenas_negativas=negativas
+        )
+        
+        if resultado.sucesso:
+            st.success("Voto registrado com sucesso!")
+            # Atualiza o estado do usuário logado na sessão para refletir que ele votou
+            repo = st.session_state["repo"]
+            st.session_state["usuario_logado"] = repo.get_participante_by_telefone(usuario.telefone)
+            st.rerun()
+        else:
+            st.error(resultado.mensagem)
+
+
+def render_admin():
+    """Renderiza o painel de administração."""
+    usuario: Participante = st.session_state["usuario_logado"]
+    repo: MemoryRepository = st.session_state["repo"]
+    engine: EngineService = st.session_state["engine_service"]
+    config = repo.get_config()
+    
+    col1, col2 = st.columns([0.8, 0.2])
+    with col1:
+        st.header("Painel de Administração")
+        st.markdown(f"👑 Bem-vindo, **{usuario.nome}**")
+    with col2:
+        if st.button("Sair"):
+            st.session_state["usuario_logado"] = None
+            st.rerun()
+            
+    st.divider()
+    
+    # Status e Métricas
+    total_votos = repo.contar_votos()
+    st.metric("Total de Votos Registrados", f"{total_votos} / {config.quorum_alvo}")
+    
+    st.markdown(f"Status do Bolão: **{config.status}**")
+    
+    if config.esta_aberto():
+        st.warning("O bolão ainda está aberto para votação.")
+        if st.button("Encerrar Votação Manualmente", type="secondary"):
+            config.status = "FECHADO"
+            repo.update_config(config)
+            st.rerun()
+    else:
+        st.success("O bolão está fechado para novos votos. Pronto para gerar os jogos!")
+        
+        if st.button("🚀 Gerar Jogos (Motor Matemático)", type="primary"):
+            with st.spinner("Analisando votos e calculando ranking..."):
+                votos = repo.listar_votos()
+                ranking = engine.calcular_ranking(votos)
+                
+            with st.spinner("Gerando seed guloso e otimizando com SA (pode demorar alguns segundos)..."):
+                # Geração
+                seed = engine.gerar_seed_guloso(ranking, qtd_jogos=9, dezenas_por_jogo=16)
+                # Otimização rápida na UI (1000 iterações)
+                jogos = engine.otimizar_jogos(seed, ranking, iteracoes=1000)
+                
+                st.session_state["jogos_gerados"] = jogos
+                st.session_state["ranking"] = ranking
+                
+        # Mostrar os jogos gerados
+        if "jogos_gerados" in st.session_state:
+            st.subheader("Resultados - Jogos Otimizados")
+            jogos = st.session_state["jogos_gerados"]
+            
+            for i, jogo in enumerate(jogos):
+                st.write(f"**Jogo {i+1}**: {jogo}")
+                
+            # Ranking Top 5 e Bottom 5 para contexto
+            ranking = st.session_state["ranking"]
+            top_5 = [d for d, _ in ranking[:5]]
+            st.write(f"Top 5 dezenas mais votadas: {top_5}")
+
+
+def main():
+    inicializar_estado()
+    
+    usuario: Participante = st.session_state["usuario_logado"]
+    
+    if usuario is None:
+        render_login()
+    elif usuario.eh_admin():
+        render_admin()
+    else:
+        render_votacao()
+
+
+if __name__ == "__main__":
+    main()
