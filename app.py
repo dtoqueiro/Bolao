@@ -23,6 +23,40 @@ st.set_page_config(
 )
 
 
+def injetar_css():
+    st.markdown("""
+    <style>
+    /* Ocultar o menu hamburguer padrão e rodapé do Streamlit para visual mais limpo */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Arredondamento de botões */
+    .stButton>button {
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .stButton>button:hover {
+        transform: scale(1.02);
+    }
+    
+    /* Inputs com cantos arredondados */
+    .stTextInput>div>div>input {
+        border-radius: 8px;
+    }
+    
+    /* Layout espaçado para cabeçalhos (estilo Airbnb) */
+    h1, h2, h3 {
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# Aplica o CSS globalmente
+injetar_css()
+
 def inicializar_estado():
     """Inicializa as variáveis de sessão (Session State)."""
     if "repo" not in st.session_state:
