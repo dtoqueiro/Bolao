@@ -89,32 +89,39 @@ def inicializar_estado():
 
 def render_login():
     """Renderiza a tela de login."""
-    st.header("🍀 Bolão Lotofácil")
+    repo = st.session_state["repo"]
+    config = repo.get_config()
+    
+    # Usa o nome do bolão configurado no Google Sheets
+    st.header(f"🍀 {config.nome_bolao}")
     st.subheader("Identificação")
     
-    st.markdown("Bem-vindo! Por favor, identifique-se usando seu **telefone** ou **nome completo**.")
-    
-    identificacao = st.text_input("Telefone ou Nome:")
+    if config.login_telefone_habilitado:
+        st.markdown("Bem-vindo! Por favor, identifique-se usando seu **telefone** ou **nome completo**.")
+        identificacao = st.text_input("Telefone ou Nome:")
+    else:
+        st.markdown("Bem-vindo! Por favor, identifique-se usando seu **Nome Completo**.")
+        identificacao = st.text_input("Nome Completo:")
     
     if st.button("Entrar"):
         if not identificacao:
-            st.error("Por favor, digite seu telefone ou nome.")
+            st.error("Por favor, digite sua identificação.")
             return
             
         auth: AuthService = st.session_state["auth_service"]
         
-        # Tenta por telefone primeiro se tiver só números ou começar com formato de telefone
-        # Uma heurística simples: se tiver números suficientes, tenta telefone
-        tem_numeros = any(c.isdigit() for c in identificacao)
-        
-        if tem_numeros:
-            resultado = auth.login_por_telefone(identificacao)
-            # Fallback: se não achar por telefone, tenta por nome (pode ser um nome com número? Raro, mas possível)
-            if not resultado.sucesso and "não cadastrado" in resultado.mensagem.lower():
-                resultado_nome = auth.login_por_nome(identificacao)
-                if resultado_nome.sucesso or "já votou" in resultado_nome.mensagem.lower():
-                    resultado = resultado_nome
-        else:
+        resultado = None
+        if config.login_telefone_habilitado:
+            tem_numeros = any(c.isdigit() for c in identificacao)
+            if tem_numeros:
+                resultado = auth.login_por_telefone(identificacao)
+                if not resultado.sucesso and "não cadastrado" in resultado.mensagem.lower():
+                    resultado_nome = auth.login_por_nome(identificacao)
+                    if resultado_nome.sucesso or "já votou" in resultado_nome.mensagem.lower():
+                        resultado = resultado_nome
+                        
+        # Se não tentou por telefone ou falhou, tenta por nome
+        if resultado is None or (not resultado.sucesso and "telefone" in resultado.mensagem.lower()):
             resultado = auth.login_por_nome(identificacao)
             
         if resultado.sucesso:

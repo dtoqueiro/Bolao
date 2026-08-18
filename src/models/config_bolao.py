@@ -37,12 +37,16 @@ class ConfigBolao:
         quorum_alvo: Número de participantes que dispara encerramento automático.
         qtd_jogos: Quantidade de jogos (bilhetes) a serem gerados.
         dezenas_por_jogo: Quantidade de dezenas por jogo (15 a 20).
+        nome_bolao: O nome de exibição do bolão na interface.
+        login_telefone_habilitado: Se True, permite login usando número de telefone.
     """
 
     status: str = "ABERTO"
     quorum_alvo: int = 24
     qtd_jogos: int = 9
     dezenas_por_jogo: int = 16
+    nome_bolao: str = "Bolão Lotofácil"
+    login_telefone_habilitado: bool = False
 
     def __post_init__(self):
         """Validações executadas após a inicialização."""

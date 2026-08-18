@@ -70,11 +70,16 @@ class GoogleSheetsRepository(BaseRepository):
             # Ignora linhas totalmente vazias
             if not any(r.values()):
                 continue
+            telefone = str(r.get("Telefone", "")).strip()
+            # O Google Sheets as vezes converte "00000000000" para o número 0
+            if telefone == "0":
+                telefone = "00000000000"
+                
             p = Participante(
-                nome=str(r.get("Nome", "")),
-                telefone_limpo=str(r.get("Telefone", "")),
-                status_voto=str(r.get("Status Voto", "Pendente")),
-                nivel_acesso=str(r.get("Nivel de Acesso", "Participante"))
+                nome=str(r.get("Nome", "")).strip(),
+                telefone_limpo=telefone,
+                status_voto=str(r.get("Status Voto", "Pendente")).strip() or "Pendente",
+                nivel_acesso=str(r.get("Nivel de Acesso", "Participante")).strip() or "Participante"
             )
             participantes.append(p)
         return participantes
@@ -180,7 +185,9 @@ class GoogleSheetsRepository(BaseRepository):
         if len(self._ws_config.get_all_values()) <= 1:
             self._ws_config.append_rows([
                 ["quorum_alvo", "24"],
-                ["status", "ABERTO"]
+                ["status", "ABERTO"],
+                ["nome_bolao", "Bolão Lotofácil"],
+                ["login_telefone_habilitado", "False"]
             ])
 
     def get_config(self) -> ConfigBolao:
@@ -190,7 +197,15 @@ class GoogleSheetsRepository(BaseRepository):
         
         quorum = int(config_dict.get("quorum_alvo", "24"))
         status = config_dict.get("status", "ABERTO")
-        return ConfigBolao(quorum_alvo=quorum, status=status)
+        nome = config_dict.get("nome_bolao", "Bolão Lotofácil")
+        login_telefone = config_dict.get("login_telefone_habilitado", "False").lower() in ("true", "1", "sim", "yes")
+        
+        return ConfigBolao(
+            quorum_alvo=quorum, 
+            status=status, 
+            nome_bolao=nome, 
+            login_telefone_habilitado=login_telefone
+        )
 
     def update_config(self, config: ConfigBolao) -> None:
         self._init_default_config()
@@ -204,3 +219,7 @@ class GoogleSheetsRepository(BaseRepository):
                 self._ws_config.update_cell(row_num, 2, str(config.quorum_alvo))
             elif chave == "status":
                 self._ws_config.update_cell(row_num, 2, config.status)
+            elif chave == "nome_bolao":
+                self._ws_config.update_cell(row_num, 2, config.nome_bolao)
+            elif chave == "login_telefone_habilitado":
+                self._ws_config.update_cell(row_num, 2, str(config.login_telefone_habilitado))
