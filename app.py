@@ -96,14 +96,17 @@ def render_login():
     st.header(f"🍀 {config.nome_bolao}")
     st.subheader("Identificação")
     
-    if config.login_telefone_habilitado:
-        st.markdown("Bem-vindo! Por favor, identifique-se usando seu **telefone** ou **nome completo**.")
-        identificacao = st.text_input("Telefone ou Nome:")
-    else:
-        st.markdown("Bem-vindo! Por favor, identifique-se usando seu **Nome Completo**.")
-        identificacao = st.text_input("Nome Completo:")
+    with st.form(key="login_form"):
+        if config.login_telefone_habilitado:
+            st.markdown("Bem-vindo! Por favor, identifique-se usando seu **telefone** ou **nome completo**.")
+            identificacao = st.text_input("Telefone ou Nome:")
+        else:
+            st.markdown("Bem-vindo! Por favor, identifique-se usando seu **Nome Completo**.")
+            identificacao = st.text_input("Nome Completo:")
+        
+        submit_button = st.form_submit_button("Entrar")
     
-    if st.button("Entrar"):
+    if submit_button:
         if not identificacao:
             st.error("Por favor, digite sua identificação.")
             return
