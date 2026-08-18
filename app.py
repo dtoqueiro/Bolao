@@ -222,6 +222,25 @@ def render_admin():
             ranking = st.session_state["ranking"]
             top_5 = [d for d, _ in ranking[:5]]
             st.write(f"Top 5 dezenas mais votadas: {top_5}")
+            
+            # Exportação COLOGA
+            st.divider()
+            st.subheader("Exportação")
+            
+            # Formata os jogos para o padrão COLOGA: números com 2 dígitos separados por espaço
+            linhas_cologa = []
+            for jogo in jogos:
+                linha = " ".join([f"{d:02d}" for d in jogo])
+                linhas_cologa.append(linha)
+            conteudo_cologa = "\n".join(linhas_cologa)
+            
+            st.download_button(
+                label="📥 Baixar Arquivo para COLOGA (.txt)",
+                data=conteudo_cologa,
+                file_name="jogos_bolao_cologa.txt",
+                mime="text/plain",
+                type="primary"
+            )
 
 
 def main():
