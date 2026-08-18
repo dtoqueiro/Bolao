@@ -17,6 +17,7 @@ htmlcov/
 .venv/
 venv/
 .env
+config.env
 
 # Streamlit
 .streamlit/secrets.toml
@@ -30,3 +31,6 @@ venv/
 # OS
 Thumbs.db
 .DS_Store
+
+#Google AI
+credentials.json

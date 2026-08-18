@@ -13,6 +13,8 @@ from src.services.engine_service import EngineService
 from src.models.participante import Participante
 from src.models.voto import Voto
 
+from src.repositories.google_sheets_repository import GoogleSheetsRepository
+
 # Configuração da página (deve ser a primeira chamada Streamlit)
 st.set_page_config(
     page_title="Bolão Lotofácil",
@@ -24,13 +26,17 @@ st.set_page_config(
 def inicializar_estado():
     """Inicializa as variáveis de sessão (Session State)."""
     if "repo" not in st.session_state:
-        # Por enquanto usamos o repositório em memória
-        repo = MemoryRepository()
-        
-        # Se for teste, popula o repo com dados falsos
+        # Se for teste, usa memória e popula o repo com dados falsos
         if st.session_state.get("_test_mode", False):
+            repo = MemoryRepository()
             repo.add_participante(Participante("João Silva", "11999998888", "Pendente", "Participante"))
             repo.add_participante(Participante("Admin", "00000000000", "Pendente", "Admin"))
+        else:
+            try:
+                repo = GoogleSheetsRepository()
+            except Exception as e:
+                st.error(f"Erro ao conectar ao Google Sheets: {e}")
+                st.stop()
             
         st.session_state["repo"] = repo
 
@@ -113,19 +119,24 @@ def render_votacao():
     positivas = st.multiselect(
         "Dezenas Favoritas (+1 ponto)", 
         options=dezenas,
+        max_selections=5,
         help="Escolha de 1 a 5 dezenas que você quer muito que estejam nos jogos."
     )
     
+    # As dezenas escolhidas nas positivas não podem ser escolhidas nas negativas
+    dezenas_disponiveis_neg = [d for d in dezenas if d not in positivas]
+    
     negativas = st.multiselect(
         "Dezenas Indesejadas (-1 ponto)", 
-        options=dezenas,
+        options=dezenas_disponiveis_neg,
+        max_selections=3,
         help="Escolha de 0 a 3 dezenas que você prefere que fiquem de fora."
     )
     
     if st.button("Confirmar Voto", type="primary"):
         votacao: VotacaoService = st.session_state["votacao_service"]
         resultado = votacao.registrar_voto(
-            telefone_limpo=usuario.telefone,
+            telefone_limpo=usuario.telefone_limpo,
             dezenas_positivas=positivas,
             dezenas_negativas=negativas
         )
@@ -134,7 +145,7 @@ def render_votacao():
             st.success("Voto registrado com sucesso!")
             # Atualiza o estado do usuário logado na sessão para refletir que ele votou
             repo = st.session_state["repo"]
-            st.session_state["usuario_logado"] = repo.get_participante_by_telefone(usuario.telefone)
+            st.session_state["usuario_logado"] = repo.get_participante_by_telefone(usuario.telefone_limpo)
             st.rerun()
         else:
             st.error(resultado.mensagem)
@@ -173,14 +184,26 @@ def render_admin():
     else:
         st.success("O bolão está fechado para novos votos. Pronto para gerar os jogos!")
         
+        if st.button("Reabrir Votação", type="secondary"):
+            config.status = "ABERTO"
+            repo.update_config(config)
+            st.rerun()
+            
+        st.subheader("Configurações de Geração")
+        col_q1, col_q2 = st.columns(2)
+        with col_q1:
+            qtd_jogos = st.number_input("Quantidade de Jogos", min_value=1, max_value=100, value=9)
+        with col_q2:
+            dezenas_por_jogo = st.number_input("Dezenas por Jogo", min_value=15, max_value=20, value=16)
+        
         if st.button("🚀 Gerar Jogos (Motor Matemático)", type="primary"):
             with st.spinner("Analisando votos e calculando ranking..."):
-                votos = repo.listar_votos()
+                votos = repo.get_votos()
                 ranking = engine.calcular_ranking(votos)
                 
             with st.spinner("Gerando seed guloso e otimizando com SA (pode demorar alguns segundos)..."):
-                # Geração
-                seed = engine.gerar_seed_guloso(ranking, qtd_jogos=9, dezenas_por_jogo=16)
+                # Geração com parâmetros configuráveis
+                seed = engine.gerar_seed_guloso(ranking, qtd_jogos=int(qtd_jogos), dezenas_por_jogo=int(dezenas_por_jogo))
                 # Otimização rápida na UI (1000 iterações)
                 jogos = engine.otimizar_jogos(seed, ranking, iteracoes=1000)
                 
