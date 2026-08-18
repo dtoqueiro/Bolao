@@ -1,0 +1,30 @@
+[project]
+name = "bolao-lotofacil"
+version = "0.1.0"
+description = "Plataforma Dinâmica de Bolão Lotofácil com inteligência coletiva"
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit>=1.36.0",
+    "gspread>=6.1.0",
+    "google-auth>=2.30.0",
+    "pandas>=2.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-cov>=5.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
