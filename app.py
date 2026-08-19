@@ -154,18 +154,29 @@ def render_votacao():
             st.session_state["usuario_logado"] = None
             st.rerun()
             
+    repo = st.session_state["repository"]
+    voto_atual = None
     if usuario.ja_votou():
-        st.success("✅ Você já registrou seu voto! Aguarde o encerramento do bolão.")
-        return
+        # Busca o voto anterior
+        votos = repo.get_votos()
+        for v in votos:
+            if v.telefone_limpo == usuario.telefone_limpo:
+                voto_atual = v
+                break
+                
+        st.info("✅ Você já registrou um voto! Você pode verificar seus números abaixo e alterá-los caso a votação ainda esteja aberta.")
         
     st.subheader("Escolha seus números")
     st.markdown("Regras: 1 a 5 números que você mais gosta, 0 a 3 números que menos gosta. Não pode haver interseção.")
     
     dezenas = list(range(1, 26))
     
+    default_pos = voto_atual.dezenas_positivas if voto_atual else []
+    
     positivas = st.multiselect(
         "Números que mais gosto (+1 ponto)", 
         options=dezenas,
+        default=default_pos,
         max_selections=5,
         help="Escolha de 1 a 5 números que você quer muito que estejam nos jogos."
     )
@@ -173,9 +184,14 @@ def render_votacao():
     # As dezenas escolhidas nas positivas não podem ser escolhidas nas negativas
     dezenas_disponiveis_neg = [d for d in dezenas if d not in positivas]
     
+    default_neg = voto_atual.dezenas_negativas if voto_atual else []
+    # Garante que os valores default ainda são válidos nas opções disponíveis
+    valid_default_neg = [d for d in default_neg if d in dezenas_disponiveis_neg]
+    
     negativas = st.multiselect(
         "Números que menos gosto (-1 ponto)", 
         options=dezenas_disponiveis_neg,
+        default=valid_default_neg,
         max_selections=3,
         help="Escolha de 0 a 3 números que você prefere que fiquem de fora."
     )

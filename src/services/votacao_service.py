@@ -52,12 +52,6 @@ class VotacaoService:
                 mensagem=f"Participante não encontrado (telefone: {telefone_limpo})."
             )
 
-        if participante.ja_votou():
-            return ResultadoVotacao(
-                sucesso=False,
-                mensagem=f"O participante {participante.nome} já votou."
-            )
-
         # 4. Tenta criar o modelo de voto (onde ocorrem as validações de regra de negócio)
         try:
             voto = Voto(
@@ -71,7 +65,11 @@ class VotacaoService:
                 mensagem=f"Voto inválido: {e}"
             )
 
-        # 5. Salva o voto e atualiza o status do participante
+        # 5. Se o participante já tinha votado, apagamos o voto anterior para substituir
+        if participante.ja_votou():
+            self._repo.delete_voto(telefone_limpo)
+
+        # 6. Salva o voto e atualiza o status do participante
         self._repo.add_voto(voto)
         
         participante.status_voto = "Votou"
