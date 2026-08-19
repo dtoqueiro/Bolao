@@ -156,26 +156,26 @@ def render_votacao():
         st.success("✅ Você já registrou seu voto! Aguarde o encerramento do bolão.")
         return
         
-    st.subheader("Escolha suas dezenas")
-    st.markdown("Regras: 1 a 5 favoritas, 0 a 3 indesejadas. Não pode haver interseção.")
+    st.subheader("Escolha seus números")
+    st.markdown("Regras: 1 a 5 números que você mais gosta, 0 a 3 números que menos gosta. Não pode haver interseção.")
     
     dezenas = list(range(1, 26))
     
     positivas = st.multiselect(
-        "Dezenas Favoritas (+1 ponto)", 
+        "Números que mais gosto (+1 ponto)", 
         options=dezenas,
         max_selections=5,
-        help="Escolha de 1 a 5 dezenas que você quer muito que estejam nos jogos."
+        help="Escolha de 1 a 5 números que você quer muito que estejam nos jogos."
     )
     
     # As dezenas escolhidas nas positivas não podem ser escolhidas nas negativas
     dezenas_disponiveis_neg = [d for d in dezenas if d not in positivas]
     
     negativas = st.multiselect(
-        "Dezenas Indesejadas (-1 ponto)", 
+        "Números que menos gosto (-1 ponto)", 
         options=dezenas_disponiveis_neg,
         max_selections=3,
-        help="Escolha de 0 a 3 dezenas que você prefere que fiquem de fora."
+        help="Escolha de 0 a 3 números que você prefere que fiquem de fora."
     )
     
     if st.button("Confirmar Voto", type="primary"):
