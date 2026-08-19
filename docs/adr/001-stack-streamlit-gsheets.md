@@ -6,7 +6,7 @@
 ## Contexto
 
 Necessidade de construir um MVP rápido e gratuito para coleta de palpites
-e geração de jogos de Lotofácil. O público-alvo é um grupo pequeno (~24 pessoas)
+e geração de jogos de Lotofácil. O público-alvo é um grupo pequeno (~25 pessoas)
 e o deploy precisa ser simples e sem custo.
 
 ## Decisão

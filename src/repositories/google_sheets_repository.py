@@ -193,7 +193,7 @@ class GoogleSheetsRepository(BaseRepository):
         # Se só tiver o cabeçalho
         if len(self._ws_config.get_all_values()) <= 1:
             self._ws_config.append_rows([
-                ["quorum_alvo", "24"],
+                ["quorum_alvo", "25"],
                 ["status", "ABERTO"],
                 ["nome_bolao", "Bolão Lotofácil"],
                 ["login_telefone_habilitado", "False"]
@@ -204,7 +204,7 @@ class GoogleSheetsRepository(BaseRepository):
         registros = self._ws_config.get_all_records()
         config_dict = {str(r.get("Chave", "")): str(r.get("Valor", "")) for r in registros if r.get("Chave")}
         
-        quorum = int(config_dict.get("quorum_alvo", "24"))
+        quorum = int(config_dict.get("quorum_alvo", "25"))
         status = config_dict.get("status", "ABERTO")
         nome = config_dict.get("nome_bolao", "Bolão Lotofácil")
         login_telefone = config_dict.get("login_telefone_habilitado", "False").lower() in ("true", "1", "sim", "yes")

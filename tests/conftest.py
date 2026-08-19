@@ -21,7 +21,7 @@ def config_padrao():
     """Configuração padrão do bolão para testes."""
     return {
         "status": "ABERTO",
-        "quorum_alvo": 24,
+        "quorum_alvo": 25,
         "qtd_jogos": 9,
         "dezenas_por_jogo": 16,
     }

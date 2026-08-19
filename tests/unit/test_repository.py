@@ -121,7 +121,7 @@ class TestMemoryRepositoryConfig:
     def test_config_padrao(self, repo_vazio):
         config = repo_vazio.get_config()
         assert config.status == "ABERTO"
-        assert config.quorum_alvo == 24
+        assert config.quorum_alvo == 25
         assert config.qtd_jogos == 9
         assert config.dezenas_por_jogo == 16
 

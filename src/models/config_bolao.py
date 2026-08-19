@@ -42,7 +42,7 @@ class ConfigBolao:
     """
 
     status: str = "ABERTO"
-    quorum_alvo: int = 24
+    quorum_alvo: int = 25
     qtd_jogos: int = 9
     dezenas_por_jogo: int = 16
     nome_bolao: str = "Bolão Lotofácil"

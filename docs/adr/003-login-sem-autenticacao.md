@@ -6,7 +6,7 @@
 ## Contexto
 
 O sistema precisa identificar participantes para controlar quem votou.
-O grupo é pequeno (~24 pessoas) e confiável. Segurança robusta não é
+O grupo é pequeno (~25 pessoas) e confiável. Segurança robusta não é
 prioridade nesta versão.
 
 ## Decisão
