@@ -19,16 +19,20 @@ from src.services.engine_service import EngineService
 
 # Configuração da página (deve ser a primeira chamada Streamlit)
 st.set_page_config(
-    page_title="Bolão Lotofácil Premium",
+    page_title="Bolão Lotofácil",
     page_icon="🍀",
-    layout="centered",
-    initial_sidebar_state="collapsed"
+    layout="centered"
 )
 
 
 def injetar_css():
     st.markdown("""
     <style>
+    /* Ocultar o menu hamburguer padrão e rodapé do Streamlit para visual mais limpo */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
     /* Arredondamento de botões */
     .stButton>button {
         border-radius: 8px;
@@ -91,24 +95,24 @@ def render_login():
     repo = st.session_state["repository"]
     config = repo.get_config()
     
-    # Adiciona card centralizado
-    st.markdown('<div class="logo-trevo">🍀</div>', unsafe_allow_html=True)
-    st.markdown(f'<h1 style="text-align: center;">{config.nome_bolao}</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; color: #666; margin-bottom: 2rem;">Identifique-se para montar sua estratégia e participar do bolão!</p>', unsafe_allow_html=True)
+    # Usa o nome do bolão configurado no Google Sheets
+    st.header(f"🍀 {config.nome_bolao}")
+    st.subheader("Identificação")
     
-    with st.container():
-        with st.form(key="login_form"):
-            if config.login_telefone_habilitado:
-                identificacao = st.text_input("Qual o seu Nome Completo ou Telefone?")
-            else:
-                identificacao = st.text_input("Qual o seu Nome Completo?")
-            
-            submit_button = st.form_submit_button("Acessar Bolão 🚀")
+    with st.form(key="login_form"):
+        if config.login_telefone_habilitado:
+            st.markdown("Bem-vindo! Por favor, identifique-se usando seu **telefone** ou **nome completo**.")
+            identificacao = st.text_input("Telefone ou Nome:")
+        else:
+            st.markdown("Bem-vindo! Por favor, identifique-se usando seu **Nome Completo**.")
+            identificacao = st.text_input("Nome Completo:")
         
-        if submit_button:
-            if not identificacao:
-                st.error("⚠️ Por favor, digite sua identificação.")
-                return
+        submit_button = st.form_submit_button("Entrar")
+    
+    if submit_button:
+        if not identificacao:
+            st.error("Por favor, digite sua identificação.")
+            return
             
         auth: AuthService = st.session_state["auth_service"]
         
@@ -128,13 +132,13 @@ def render_login():
             
         if resultado.sucesso:
             st.session_state["usuario_logado"] = resultado.participante
-            st.success(f"✅ {resultado.mensagem}")
+            st.success(resultado.mensagem)
             st.rerun()
         else:
             if "já votou" in resultado.mensagem.lower():
-                st.warning(f"⚠️ {resultado.mensagem}")
+                st.warning(resultado.mensagem)
             else:
-                st.error(f"❌ {resultado.mensagem}")
+                st.error(resultado.mensagem)
 
 
 def render_votacao():
@@ -143,15 +147,15 @@ def render_votacao():
     
     col1, col2 = st.columns([0.8, 0.2])
     with col1:
-        st.header("Sua Cédula 📝")
+        st.header("Cédula de Votação")
         st.markdown(f"👤 Conectado como: **{usuario.nome}**")
     with col2:
-        if st.button("Sair 👋"):
+        if st.button("Sair"):
             st.session_state["usuario_logado"] = None
             st.rerun()
             
     if usuario.ja_votou():
-        st.success("🎉 **Tudo pronto!** Seus números já foram registrados. Boa sorte! 🍀")
+        st.success("✅ Você já registrou seu voto! Aguarde o encerramento do bolão.")
         return
         
     st.subheader("Escolha seus números")
@@ -212,7 +216,7 @@ def render_admin():
             
     st.divider()
     
-    aba_dashboard, aba_participantes = st.tabs(["📈 Visão Geral", "👥 Participantes"])
+    aba_dashboard, aba_participantes = st.tabs(["📊 Dashboard & Sorteio", "👥 Gestão de Participantes"])
     
     with aba_dashboard:
         # Status e Métricas
