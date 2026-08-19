@@ -217,7 +217,16 @@ def render_admin():
     total_votos = repo.contar_votos()
     st.metric("Total de Votos Registrados", f"{total_votos} / {config.quorum_alvo}")
     
-    st.markdown(f"Status do Bolão: **{config.status}**")
+    col_status, col_quorum = st.columns(2)
+    with col_status:
+        st.markdown(f"Status do Bolão: **{config.status}**")
+        
+    with col_quorum:
+        novo_quorum = st.number_input("Quórum Alvo", min_value=1, max_value=1000, value=config.quorum_alvo)
+        if novo_quorum != config.quorum_alvo:
+            config.quorum_alvo = novo_quorum
+            repo.update_config(config)
+            st.rerun()
     
     if config.esta_aberto():
         st.warning("O bolão ainda está aberto para votação.")
