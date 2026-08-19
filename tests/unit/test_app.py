@@ -34,21 +34,17 @@ class TestAppUI:
         assert "identificação" in at.error[0].value.lower()
         
     def test_injetar_mock_repository(self):
-        """Testa usar as variáveis de sessão para forçar estado de teste e simular login."""
-        at = AppTest.from_file("../../app.py", default_timeout=10)
+        at = AppTest.from_file("../../app.py")
+        # Injeta uma flag para o app usar o MemoryRepository com dados mock
         at.session_state["_test_mode"] = True
         at.run()
         
-        # Simula login do João usando nome completo (já que telefone pode estar desabilitado no mock default)
-        identificacao_input = at.text_input[0]
-        identificacao_input.input("João Silva")
+        # Agora tentamos fazer login com o usuário mock 'João Silva'
+        # Assumimos que o app.py irá popular o repositório em _test_mode
+        at.text_input[0].input("João Silva").run()
+        at.button[0].click().run()
         
-        submit_btn = next(btn for btn in at.button if "Acessar" in btn.label)
-        submit_btn.click()
-        at.run()
-        
-        # Se logou e redirecionou, o cabeçalho 'Sua Cédula 📝' ou markdown de conectado deve aparecer
-        tem_cedula = any("Cédula" in getattr(h, 'value', '') for h in at.header)
-        tem_conectado = any("Conectado" in getattr(m, 'value', '') for m in at.markdown)
-        
-        assert tem_cedula or tem_conectado
+        assert not at.exception
+        # Após st.rerun(), a tela de votação deve aparecer
+        # Verificamos se 'Conectado como' está em algum markdown, evitando problemas de encoding com acentos
+        assert any("Conectado como" in m.value for m in at.markdown)
