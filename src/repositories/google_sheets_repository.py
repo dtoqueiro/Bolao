@@ -20,16 +20,30 @@ class GoogleSheetsRepository(BaseRepository):
     """Repositório persistente no Google Sheets."""
 
     def __init__(self, credentials_path: str = "credentials.json"):
+        import streamlit as st
+        
+        # 1. Tenta carregar o SheetID das variáveis de ambiente (local) ou do st.secrets (nuvem)
         load_dotenv("config.env")
         sheet_id = os.getenv("SheetID")
         if not sheet_id:
-            raise ValueError("SheetID não encontrado no arquivo config.env")
-            
-        if not os.path.exists(credentials_path):
-            raise FileNotFoundError(f"Arquivo de credenciais não encontrado: {credentials_path}")
+            try:
+                sheet_id = st.secrets["SheetID"]
+            except (KeyError, FileNotFoundError):
+                raise ValueError("SheetID não encontrado no arquivo config.env e nem no st.secrets")
 
-        # Autentica e abre a planilha
-        self._gc = gspread.service_account(filename=credentials_path)
+        # 2. Autentica e abre a planilha
+        if os.path.exists(credentials_path):
+            # Ambiente Local: usa o arquivo credentials.json
+            self._gc = gspread.service_account(filename=credentials_path)
+        else:
+            # Ambiente Nuvem (Streamlit Cloud): usa o st.secrets
+            try:
+                # Transforma o dict_wrapper do Streamlit num dict normal
+                credentials_dict = dict(st.secrets["gcp_service_account"])
+                self._gc = gspread.service_account_from_dict(credentials_dict)
+            except Exception as e:
+                raise FileNotFoundError(f"Arquivo {credentials_path} não encontrado e não foi possível carregar do st.secrets. Erro: {e}")
+
         self._sh = self._gc.open_by_key(sheet_id)
         
         # Garante que as abas (worksheets) existam
