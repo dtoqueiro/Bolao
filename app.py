@@ -4,16 +4,18 @@ Ponto de entrada da aplicação Streamlit.
 Gerencia o estado da sessão e o roteamento entre as telas de Login,
 Votação e Painel Admin.
 """
+import os
 import streamlit as st
+import pandas as pd
 
+from src.models.voto import Voto
+from src.models.participante import Participante
+from src.models.config_bolao import ConfigBolao
 from src.repositories.memory_repository import MemoryRepository
+from src.repositories.google_sheets_repository import GoogleSheetsRepository
 from src.services.auth_service import AuthService
 from src.services.votacao_service import VotacaoService
 from src.services.engine_service import EngineService
-from src.models.participante import Participante
-from src.models.voto import Voto
-
-from src.repositories.google_sheets_repository import GoogleSheetsRepository
 
 # Configuração da página (deve ser a primeira chamada Streamlit)
 st.set_page_config(
@@ -317,21 +319,74 @@ def render_admin():
         
         st.dataframe(dados_tabela, width="stretch")
         
+        with st.expander("📂 Importar Participantes em Lote"):
+            st.markdown("Faça upload de um arquivo `.csv` ou `.xlsx` com pelo menos uma coluna chamada **Nome**. O telefone é opcional.")
+            uploaded_file = st.file_uploader("Escolha um arquivo", type=["csv", "xlsx"])
+            if uploaded_file is not None:
+                if st.button("Processar Arquivo"):
+                    try:
+                        if uploaded_file.name.endswith('.csv'):
+                            df = pd.read_csv(uploaded_file)
+                        else:
+                            df = pd.read_excel(uploaded_file)
+                            
+                        # Normaliza colunas
+                        df.columns = [str(c).strip().title() for c in df.columns]
+                        
+                        if 'Nome' not in df.columns:
+                            st.error("O arquivo deve conter uma coluna chamada 'Nome'.")
+                        else:
+                            sucessos = 0
+                            erros = 0
+                            for _, row in df.iterrows():
+                                nome = str(row['Nome']).strip()
+                                if not nome or pd.isna(nome) or nome == 'nan':
+                                    continue
+                                
+                                telefone = ""
+                                if 'Telefone' in df.columns and not pd.isna(row['Telefone']):
+                                    # Limpa caracteres não numéricos
+                                    telefone = "".join([c for c in str(row['Telefone']) if c.isdigit()])
+                                
+                                if not telefone:
+                                    telefone = str(abs(hash(nome)))[:11].zfill(11)
+                                
+                                try:
+                                    novo_p = Participante(
+                                        nome=nome,
+                                        telefone_limpo=telefone,
+                                        nivel_acesso="Participante"
+                                    )
+                                    repo.add_participante(novo_p)
+                                    sucessos += 1
+                                except ValueError:
+                                    # Já existe ou erro de validação
+                                    erros += 1
+                                    
+                            st.success(f"Importação concluída! {sucessos} adicionados, {erros} erros/ignorados.")
+                            # Atualiza página após 2 seg ou user clica em algo, ou pode usar st.rerun
+                    except Exception as e:
+                        st.error(f"Erro ao ler o arquivo: {e}")
+
         with st.expander("➕ Adicionar Novo Participante"):
             with st.form("form_add_participante"):
-                add_nome = st.text_input("Nome Completo")
-                add_telefone = st.text_input("Telefone (11 dígitos, apenas números)")
-                add_nivel = st.selectbox("Nível de Acesso", ["Participante", "Admin"])
+                add_nome = st.text_input("Nome")
+                add_telefone = st.text_input("Telefone (Opcional, apenas números)")
+                add_nivel = st.selectbox("Nível de Acesso", options=["Participante", "Admin"])
                 
-                if st.form_submit_button("Adicionar"):
+                if st.form_submit_button("Salvar Participante"):
                     try:
+                        telefone_final = add_telefone
+                        if not telefone_final:
+                            telefone_final = str(abs(hash(add_nome)))[:11].zfill(11)
+                            
                         novo_p = Participante(
                             nome=add_nome,
-                            telefone_limpo=add_telefone,
+                            telefone_limpo=telefone_final,
                             nivel_acesso=add_nivel
                         )
                         repo.add_participante(novo_p)
-                        st.success("Participante adicionado com sucesso!")
+                        st.success(f"Participante {add_nome} adicionado!")
                         st.rerun()
                     except ValueError as e:
                         st.error(str(e))
@@ -346,11 +401,21 @@ def render_admin():
                 if tel_edit:
                     p_atual = repo.get_participante_by_telefone(tel_edit)
                     with st.form("form_edit_participante"):
-                        edit_nome = st.text_input("Nome Completo", value=p_atual.nome)
+                        edit_nome = st.text_input("Nome", value=p_atual.nome)
+                        edit_telefone = st.text_input("Telefone (Apenas números)", value=p_atual.telefone_limpo)
                         edit_nivel = st.selectbox("Nível de Acesso", ["Participante", "Admin"], index=0 if p_atual.nivel_acesso == "Participante" else 1)
                         
                         if st.form_submit_button("Salvar Alterações"):
                             try:
+                                # Se o telefone mudou, atualiza a PK primeiro
+                                tel_novo = edit_telefone
+                                if not tel_novo:
+                                    tel_novo = str(abs(hash(edit_nome)))[:11].zfill(11)
+                                    
+                                if tel_novo != p_atual.telefone_limpo:
+                                    repo.update_participante_telefone(p_atual.telefone_limpo, tel_novo)
+                                    p_atual.telefone_limpo = tel_novo
+                                    
                                 p_atual.nome = edit_nome
                                 p_atual.nivel_acesso = edit_nivel
                                 repo.update_participante(p_atual)

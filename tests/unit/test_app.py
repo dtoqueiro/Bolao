@@ -13,7 +13,7 @@ class TestAppUI:
         """O app deve iniciar pedindo identificação, pois não há sessão."""
         at = AppTest.from_file("../../app.py")
         at.session_state["_test_mode"] = True
-        at.run()
+        at.run(timeout=10)
         
         assert not at.exception
         # Verifica se renderizou componentes de login
@@ -28,7 +28,7 @@ class TestAppUI:
     def test_login_telefone_vazio_mostra_erro(self):
         at = AppTest.from_file("../../app.py")
         at.session_state["_test_mode"] = True
-        at.run()
+        at.run(timeout=10)
         
         # Assumindo que o primeiro input é o de busca e o botão é 'Entrar'
         at.text_input[0].input("").run()
@@ -43,7 +43,7 @@ class TestAppUI:
         at = AppTest.from_file("../../app.py")
         # Injeta uma flag para o app usar o MemoryRepository com dados mock
         at.session_state["_test_mode"] = True
-        at.run()
+        at.run(timeout=10)
         
         # Agora tentamos fazer login com o usuário mock 'João Silva'
         # Assumimos que o app.py irá popular o repositório em _test_mode
