@@ -59,7 +59,8 @@ injetar_css()
 
 def inicializar_estado():
     """Inicializa as variáveis de sessão (Session State)."""
-    if "repo" not in st.session_state:
+    # Usando chave nova 'repository' para forçar o recarregamento
+    if "repository" not in st.session_state:
         # Se for teste, usa memória e popula o repo com dados falsos
         if st.session_state.get("_test_mode", False):
             repo = MemoryRepository()
@@ -72,13 +73,13 @@ def inicializar_estado():
                 st.error(f"Erro ao conectar ao Google Sheets: {e}")
                 st.stop()
             
-        st.session_state["repo"] = repo
+        st.session_state["repository"] = repo
 
     if "auth_service" not in st.session_state:
-        st.session_state["auth_service"] = AuthService(st.session_state["repo"])
+        st.session_state["auth_service"] = AuthService(st.session_state["repository"])
         
     if "votacao_service" not in st.session_state:
-        st.session_state["votacao_service"] = VotacaoService(st.session_state["repo"])
+        st.session_state["votacao_service"] = VotacaoService(st.session_state["repository"])
         
     if "engine_service" not in st.session_state:
         st.session_state["engine_service"] = EngineService()
@@ -89,7 +90,7 @@ def inicializar_estado():
 
 def render_login():
     """Renderiza a tela de login."""
-    repo = st.session_state["repo"]
+    repo = st.session_state["repository"]
     config = repo.get_config()
     
     # Usa o nome do bolão configurado no Google Sheets
@@ -188,7 +189,7 @@ def render_votacao():
         if resultado.sucesso:
             st.success("Voto registrado com sucesso!")
             # Atualiza o estado do usuário logado na sessão para refletir que ele votou
-            repo = st.session_state["repo"]
+            repo = st.session_state["repository"]
             st.session_state["usuario_logado"] = repo.get_participante_by_telefone(usuario.telefone_limpo)
             st.rerun()
         else:
@@ -198,7 +199,7 @@ def render_votacao():
 def render_admin():
     """Renderiza o painel de administração."""
     usuario: Participante = st.session_state["usuario_logado"]
-    repo: MemoryRepository = st.session_state["repo"]
+    repo: MemoryRepository = st.session_state["repository"]
     engine: EngineService = st.session_state["engine_service"]
     config = repo.get_config()
     
@@ -314,7 +315,7 @@ def render_admin():
             for p in participantes
         ]
         
-        st.dataframe(dados_tabela, use_container_width=True)
+        st.dataframe(dados_tabela, width="stretch")
         
         with st.expander("➕ Adicionar Novo Participante"):
             with st.form("form_add_participante"):
