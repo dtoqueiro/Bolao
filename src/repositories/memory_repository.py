@@ -100,6 +100,13 @@ class MemoryRepository(BaseRepository):
     def delete_voto(self, telefone: str) -> None:
         self._votos = [v for v in self._votos if v.telefone_limpo != telefone]
 
+    def clear_votos(self) -> None:
+        self._votos = []
+
+    def reset_status_votos(self) -> None:
+        for p in self._participantes:
+            p.status_voto = "Pendente"
+
     def contar_votos(self) -> int:
         return len(self._votos)
 

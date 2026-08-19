@@ -244,8 +244,12 @@ def render_admin():
             st.success("O bolão está fechado para novos votos. Pronto para gerar os jogos!")
             
             if st.button("Reabrir Votação", type="secondary"):
-                config.status = "ABERTO"
-                repo.update_config(config)
+                with st.spinner("Zerar os votos antigos e limpando o status dos participantes..."):
+                    repo.clear_votos()
+                    repo.reset_status_votos()
+                    config.status = "ABERTO"
+                    repo.update_config(config)
+                st.success("Votação reaberta e todos os votos zerados com sucesso!")
                 st.rerun()
                 
             st.subheader("Configurações de Geração")

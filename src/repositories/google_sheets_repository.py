@@ -209,6 +209,16 @@ class GoogleSheetsRepository(BaseRepository):
                 row_num = idx + 2
                 self._ws_votos.delete_rows(row_num)
 
+    def clear_votos(self) -> None:
+        self._ws_votos.clear()
+        self._ws_votos.append_row(["Telefone", "Dezenas Positivas", "Dezenas Negativas"])
+
+    def reset_status_votos(self) -> None:
+        col_c = self._ws_participantes.col_values(3)
+        if len(col_c) > 1:
+            nova_col = [["Pendente"]] * (len(col_c) - 1)
+            self._ws_participantes.update(f"C2:C{len(col_c)}", nova_col)
+
     def contar_votos(self) -> int:
         # Pega a primeira coluna (Telefone) e conta, ignorando o cabeçalho
         col_valores = self._ws_votos.col_values(1)

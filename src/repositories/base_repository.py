@@ -74,6 +74,16 @@ class BaseRepository(ABC):
         ...
 
     @abstractmethod
+    def clear_votos(self) -> None:
+        """Remove todos os votos registrados."""
+        ...
+
+    @abstractmethod
+    def reset_status_votos(self) -> None:
+        """Redefine o status_voto de todos os participantes para Pendente."""
+        ...
+
+    @abstractmethod
     def contar_votos(self) -> int:
         """Retorna o número total de votos registrados."""
         ...
