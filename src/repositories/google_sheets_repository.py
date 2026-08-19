@@ -93,16 +93,25 @@ class GoogleSheetsRepository(BaseRepository):
             # Ignora linhas totalmente vazias
             if not any(r.values()):
                 continue
+                
             nome = str(r.get("Nome", "")).strip()
+            if not nome:
+                continue  # Pula linhas mal formatadas onde o Nome está vazio
+                
             telefone_limpo = self._obter_telefone_efetivo(r)
                 
-            p = Participante(
-                nome=nome,
-                telefone_limpo=telefone_limpo,
-                status_voto=str(r.get("Status Voto", "Pendente")).strip() or "Pendente",
-                nivel_acesso=str(r.get("Nivel de Acesso", "Participante")).strip() or "Participante"
-            )
-            participantes.append(p)
+            try:
+                p = Participante(
+                    nome=nome,
+                    telefone_limpo=telefone_limpo,
+                    status_voto=str(r.get("Status Voto", "Pendente")).strip() or "Pendente",
+                    nivel_acesso=str(r.get("Nivel de Acesso", "Participante")).strip() or "Participante"
+                )
+                participantes.append(p)
+            except ValueError:
+                # Ignora linhas que não passam nas validações do modelo
+                continue
+                
         return participantes
 
     def get_participante_by_telefone(self, telefone: str) -> Optional[Participante]:
