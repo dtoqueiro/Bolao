@@ -22,7 +22,7 @@ def config_padrao():
     return {
         "status": "ABERTO",
         "quorum_alvo": 25,
-        "qtd_jogos": 9,
+        "qtd_jogos": 10,
         "dezenas_por_jogo": 16,
     }
 

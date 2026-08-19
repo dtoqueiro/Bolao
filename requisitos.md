@@ -78,7 +78,7 @@ Como os parâmetros agora são variáveis, o sistema abandona a substituição e
 
 - **Definir Quórum:** Estabelecer o número de participantes do bolão atual (gatilho de encerramento automático).
 
-- **Definir Estratégia:** Configurar a **Quantidade de Jogos** (ex: 9) e a **Quantidade de Dezenas por Jogo** (ex: 15, 16, 17, etc.).
+- **Definir Estratégia:** Configurar a **Quantidade de Jogos** (ex: 10) e a **Quantidade de Dezenas por Jogo** (ex: 15, 16, 17, etc.).
 
 - **[REQ-16]** O Painel do Administrador deve permitir as seguintes **Ações de Gestão**:
 
@@ -113,7 +113,7 @@ Como os parâmetros agora são variáveis, o sistema abandona a substituição e
 
 - `Quorum_Alvo` = `23`
 
-- `Qtd_Jogos` = `9`
+- `Qtd_Jogos` = `10`
 
 - `Dezenas_Por_Jogo` = `16`
 

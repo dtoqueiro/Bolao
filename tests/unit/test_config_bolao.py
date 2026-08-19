@@ -13,7 +13,7 @@ class TestConfigBolaoCriacao:
         c = ConfigBolao()
         assert c.status == "ABERTO"
         assert c.quorum_alvo == 25
-        assert c.qtd_jogos == 9
+        assert c.qtd_jogos == 10
         assert c.dezenas_por_jogo == 16
 
     def test_cria_config_customizada(self):

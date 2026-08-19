@@ -31,7 +31,7 @@ Utilizar um **motor híbrido** em duas etapas:
 
 ### Positivas
 - Qualidade superior de distribuição vs. greedy puro
-- Execução rápida (~2 segundos para 9 jogos × 16 dezenas)
+- Execução rápida (~2 segundos para 10 jogos × 16 dezenas)
 - Extensível (basta ajustar pesos da função de energia)
 - Reproduzível com random.seed fixa
 - Métricas de qualidade derivadas da função de energia

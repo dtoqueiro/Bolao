@@ -236,7 +236,7 @@ def render_admin():
         st.subheader("Configurações de Geração")
         col_q1, col_q2 = st.columns(2)
         with col_q1:
-            qtd_jogos = st.number_input("Quantidade de Jogos", min_value=1, max_value=100, value=9)
+            qtd_jogos = st.number_input("Quantidade de Jogos", min_value=1, max_value=100, value=10)
         with col_q2:
             dezenas_por_jogo = st.number_input("Dezenas por Jogo", min_value=15, max_value=20, value=16)
         

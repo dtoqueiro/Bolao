@@ -43,7 +43,7 @@ class ConfigBolao:
 
     status: str = "ABERTO"
     quorum_alvo: int = 25
-    qtd_jogos: int = 9
+    qtd_jogos: int = 10
     dezenas_por_jogo: int = 16
     nome_bolao: str = "Bolão Lotofácil"
     login_telefone_habilitado: bool = False
