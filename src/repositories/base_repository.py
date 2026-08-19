@@ -51,6 +51,11 @@ class BaseRepository(ABC):
         """Atualiza o telefone de um participante."""
         ...
 
+    @abstractmethod
+    def delete_participante(self, telefone: str) -> None:
+        """Remove um participante pelo telefone."""
+        ...
+
     # --- Votos ---
 
     @abstractmethod

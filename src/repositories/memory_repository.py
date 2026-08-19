@@ -83,6 +83,12 @@ class MemoryRepository(BaseRepository):
             f"Participante com telefone {telefone_antigo} não encontrado."
         )
 
+    def delete_participante(self, telefone: str) -> None:
+        nova_lista = [p for p in self._participantes if p.telefone_limpo != telefone]
+        if len(nova_lista) == len(self._participantes):
+            raise ValueError(f"Participante com telefone {telefone} não encontrado.")
+        self._participantes = nova_lista
+
     # --- Votos ---
 
     def get_votos(self) -> List[Voto]:

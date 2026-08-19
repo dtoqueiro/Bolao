@@ -213,87 +213,165 @@ def render_admin():
             
     st.divider()
     
-    # Status e Métricas
-    total_votos = repo.contar_votos()
-    st.metric("Total de Votos Registrados", f"{total_votos} / {config.quorum_alvo}")
+    aba_dashboard, aba_participantes = st.tabs(["📊 Dashboard & Sorteio", "👥 Gestão de Participantes"])
     
-    col_status, col_quorum = st.columns(2)
-    with col_status:
-        st.markdown(f"Status do Bolão: **{config.status}**")
+    with aba_dashboard:
+        # Status e Métricas
+        total_votos = repo.contar_votos()
+        st.metric("Total de Votos Registrados", f"{total_votos} / {config.quorum_alvo}")
         
-    with col_quorum:
-        novo_quorum = st.number_input("Quórum Alvo", min_value=1, max_value=1000, value=config.quorum_alvo)
-        if novo_quorum != config.quorum_alvo:
-            config.quorum_alvo = novo_quorum
-            repo.update_config(config)
-            st.rerun()
-    
-    if config.esta_aberto():
-        st.warning("O bolão ainda está aberto para votação.")
-        if st.button("Encerrar Votação Manualmente", type="secondary"):
-            config.status = "FECHADO"
-            repo.update_config(config)
-            st.rerun()
-    else:
-        st.success("O bolão está fechado para novos votos. Pronto para gerar os jogos!")
+        col_status, col_quorum = st.columns(2)
+        with col_status:
+            st.markdown(f"Status do Bolão: **{config.status}**")
+            
+        with col_quorum:
+            novo_quorum = st.number_input("Quórum Alvo", min_value=1, max_value=1000, value=config.quorum_alvo)
+            if novo_quorum != config.quorum_alvo:
+                config.quorum_alvo = novo_quorum
+                repo.update_config(config)
+                st.rerun()
         
-        if st.button("Reabrir Votação", type="secondary"):
-            config.status = "ABERTO"
-            repo.update_config(config)
-            st.rerun()
+        if config.esta_aberto():
+            st.warning("O bolão ainda está aberto para votação.")
+            if st.button("Encerrar Votação Manualmente", type="secondary"):
+                config.status = "FECHADO"
+                repo.update_config(config)
+                st.rerun()
+        else:
+            st.success("O bolão está fechado para novos votos. Pronto para gerar os jogos!")
             
-        st.subheader("Configurações de Geração")
-        col_q1, col_q2 = st.columns(2)
-        with col_q1:
-            qtd_jogos = st.number_input("Quantidade de Jogos", min_value=1, max_value=100, value=10)
-        with col_q2:
-            dezenas_por_jogo = st.number_input("Dezenas por Jogo", min_value=15, max_value=20, value=16)
+            if st.button("Reabrir Votação", type="secondary"):
+                config.status = "ABERTO"
+                repo.update_config(config)
+                st.rerun()
+                
+            st.subheader("Configurações de Geração")
+            col_q1, col_q2 = st.columns(2)
+            with col_q1:
+                qtd_jogos = st.number_input("Quantidade de Jogos", min_value=1, max_value=100, value=10)
+            with col_q2:
+                dezenas_por_jogo = st.number_input("Dezenas por Jogo", min_value=15, max_value=20, value=16)
+            
+            if st.button("🚀 Gerar Jogos (Motor Matemático)", type="primary"):
+                with st.spinner("Analisando votos e calculando ranking..."):
+                    votos = repo.get_votos()
+                    ranking = engine.calcular_ranking(votos)
+                    
+                with st.spinner("Gerando seed guloso e otimizando com SA (pode demorar alguns segundos)..."):
+                    # Geração com parâmetros configuráveis
+                    seed = engine.gerar_seed_guloso(ranking, qtd_jogos=int(qtd_jogos), dezenas_por_jogo=int(dezenas_por_jogo))
+                    # Otimização rápida na UI (1000 iterações)
+                    jogos = engine.otimizar_jogos(seed, ranking, iteracoes=1000)
+                    
+                    st.session_state["jogos_gerados"] = jogos
+                    st.session_state["ranking"] = ranking
+                    
+            # Mostrar os jogos gerados
+            if "jogos_gerados" in st.session_state:
+                st.subheader("Resultados - Jogos Otimizados")
+                jogos = st.session_state["jogos_gerados"]
+                
+                for i, jogo in enumerate(jogos):
+                    st.write(f"**Jogo {i+1}**: {jogo}")
+                    
+                # Ranking Top 5 e Bottom 5 para contexto
+                ranking = st.session_state["ranking"]
+                top_5 = [d for d, _ in ranking[:5]]
+                st.write(f"Top 5 dezenas mais votadas: {top_5}")
+                
+                # Exportação COLOGA
+                st.divider()
+                st.subheader("Exportação")
+                
+                # Formata os jogos para o padrão COLOGA: números com 2 dígitos separados por espaço
+                linhas_cologa = []
+                for jogo in jogos:
+                    linha = " ".join([f"{d:02d}" for d in jogo])
+                    linhas_cologa.append(linha)
+                conteudo_cologa = "\n".join(linhas_cologa)
+                
+                st.download_button(
+                    label="📥 Baixar Arquivo para COLOGA (.txt)",
+                    data=conteudo_cologa,
+                    file_name="jogos_bolao_cologa.txt",
+                    mime="text/plain",
+                    type="primary"
+                )
+
+    with aba_participantes:
+        st.subheader("Participantes Cadastrados")
         
-        if st.button("🚀 Gerar Jogos (Motor Matemático)", type="primary"):
-            with st.spinner("Analisando votos e calculando ranking..."):
-                votos = repo.get_votos()
-                ranking = engine.calcular_ranking(votos)
+        participantes = repo.get_participantes()
+        
+        # Prepara dados para a tabela
+        dados_tabela = [
+            {
+                "Nome": p.nome,
+                "Telefone": p.telefone_limpo,
+                "Status": p.status_voto,
+                "Nível": p.nivel_acesso
+            }
+            for p in participantes
+        ]
+        
+        st.dataframe(dados_tabela, use_container_width=True)
+        
+        with st.expander("➕ Adicionar Novo Participante"):
+            with st.form("form_add_participante"):
+                add_nome = st.text_input("Nome Completo")
+                add_telefone = st.text_input("Telefone (11 dígitos, apenas números)")
+                add_nivel = st.selectbox("Nível de Acesso", ["Participante", "Admin"])
                 
-            with st.spinner("Gerando seed guloso e otimizando com SA (pode demorar alguns segundos)..."):
-                # Geração com parâmetros configuráveis
-                seed = engine.gerar_seed_guloso(ranking, qtd_jogos=int(qtd_jogos), dezenas_por_jogo=int(dezenas_por_jogo))
-                # Otimização rápida na UI (1000 iterações)
-                jogos = engine.otimizar_jogos(seed, ranking, iteracoes=1000)
+                if st.form_submit_button("Adicionar"):
+                    try:
+                        novo_p = Participante(
+                            nome=add_nome,
+                            telefone_limpo=add_telefone,
+                            nivel_acesso=add_nivel
+                        )
+                        repo.add_participante(novo_p)
+                        st.success("Participante adicionado com sucesso!")
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(str(e))
+                        
+        with st.expander("✏️ Editar Participante"):
+            if not participantes:
+                st.info("Nenhum participante cadastrado.")
+            else:
+                opcoes_edit = {p.telefone_limpo: f"{p.nome} ({p.telefone_limpo})" for p in participantes}
+                tel_edit = st.selectbox("Selecione o participante", options=list(opcoes_edit.keys()), format_func=lambda x: opcoes_edit[x], key="edit_sel")
                 
-                st.session_state["jogos_gerados"] = jogos
-                st.session_state["ranking"] = ranking
+                if tel_edit:
+                    p_atual = repo.get_participante_by_telefone(tel_edit)
+                    with st.form("form_edit_participante"):
+                        edit_nome = st.text_input("Nome Completo", value=p_atual.nome)
+                        edit_nivel = st.selectbox("Nível de Acesso", ["Participante", "Admin"], index=0 if p_atual.nivel_acesso == "Participante" else 1)
+                        
+                        if st.form_submit_button("Salvar Alterações"):
+                            try:
+                                p_atual.nome = edit_nome
+                                p_atual.nivel_acesso = edit_nivel
+                                repo.update_participante(p_atual)
+                                st.success("Participante atualizado com sucesso!")
+                                st.rerun()
+                            except ValueError as e:
+                                st.error(str(e))
+                                
+        with st.expander("❌ Excluir Participante"):
+            if not participantes:
+                st.info("Nenhum participante cadastrado.")
+            else:
+                opcoes_del = {p.telefone_limpo: f"{p.nome} ({p.telefone_limpo})" for p in participantes}
+                tel_del = st.selectbox("Selecione o participante a excluir", options=list(opcoes_del.keys()), format_func=lambda x: opcoes_del[x], key="del_sel")
                 
-        # Mostrar os jogos gerados
-        if "jogos_gerados" in st.session_state:
-            st.subheader("Resultados - Jogos Otimizados")
-            jogos = st.session_state["jogos_gerados"]
-            
-            for i, jogo in enumerate(jogos):
-                st.write(f"**Jogo {i+1}**: {jogo}")
-                
-            # Ranking Top 5 e Bottom 5 para contexto
-            ranking = st.session_state["ranking"]
-            top_5 = [d for d, _ in ranking[:5]]
-            st.write(f"Top 5 dezenas mais votadas: {top_5}")
-            
-            # Exportação COLOGA
-            st.divider()
-            st.subheader("Exportação")
-            
-            # Formata os jogos para o padrão COLOGA: números com 2 dígitos separados por espaço
-            linhas_cologa = []
-            for jogo in jogos:
-                linha = " ".join([f"{d:02d}" for d in jogo])
-                linhas_cologa.append(linha)
-            conteudo_cologa = "\n".join(linhas_cologa)
-            
-            st.download_button(
-                label="📥 Baixar Arquivo para COLOGA (.txt)",
-                data=conteudo_cologa,
-                file_name="jogos_bolao_cologa.txt",
-                mime="text/plain",
-                type="primary"
-            )
+                if st.button("Confirmar Exclusão", type="primary"):
+                    try:
+                        repo.delete_participante(tel_del)
+                        st.success("Participante excluído com sucesso!")
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(str(e))
 
 
 def main():

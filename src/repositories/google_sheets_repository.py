@@ -159,6 +159,15 @@ class GoogleSheetsRepository(BaseRepository):
                 return
         raise ValueError(f"Participante com telefone {telefone_antigo} não encontrado.")
 
+    def delete_participante(self, telefone: str) -> None:
+        registros = self._ws_participantes.get_all_records()
+        for idx in range(len(registros) - 1, -1, -1):
+            if str(registros[idx].get("Telefone", "")) == telefone:
+                row_num = idx + 2
+                self._ws_participantes.delete_rows(row_num)
+                return
+        raise ValueError(f"Participante com telefone {telefone} não encontrado.")
+
     # --- Votos ---
 
     def _parse_lista_inteiros(self, texto: str) -> List[int]:

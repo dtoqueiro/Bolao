@@ -79,6 +79,15 @@ class TestMemoryRepositoryParticipantes:
                 Participante(nome="Outro Nome", telefone_limpo="11999998888")
             )
 
+    def test_delete_participante(self, repo):
+        repo.delete_participante("11999998888")
+        assert repo.get_participante_by_telefone("11999998888") is None
+        assert len(repo.get_participantes()) == 2
+
+    def test_delete_participante_inexistente(self, repo):
+        with pytest.raises(ValueError, match="não encontrado"):
+            repo.delete_participante("99999999999")
+
 
 class TestMemoryRepositoryVotos:
     """Testes de CRUD de votos."""
