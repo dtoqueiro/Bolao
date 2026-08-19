@@ -62,7 +62,7 @@ injetar_css()
 def inicializar_estado():
     """Inicializa as variáveis de sessão (Session State)."""
     # Usando chave nova 'repository' para forçar o recarregamento
-    if "repository" not in st.session_state:
+    if "repository" not in st.session_state or not hasattr(st.session_state["repository"], "clear_votos"):
         # Se for teste, usa memória e popula o repo com dados falsos
         if st.session_state.get("_test_mode", False):
             repo = MemoryRepository()
