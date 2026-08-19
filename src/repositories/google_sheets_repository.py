@@ -77,6 +77,15 @@ class GoogleSheetsRepository(BaseRepository):
 
     # --- Participantes ---
 
+    def _obter_telefone_efetivo(self, r: dict) -> str:
+        nome = str(r.get("Nome", "")).strip()
+        telefone_raw = str(r.get("Telefone", "")).strip()
+        telefone_limpo = "".join([c for c in telefone_raw if c.isdigit()])
+        if len(telefone_limpo) != 11:
+            sufixo = str(abs(hash(nome)))[:11]
+            telefone_limpo = sufixo.zfill(11)
+        return telefone_limpo
+
     def get_participantes(self) -> List[Participante]:
         registros = self._ws_participantes.get_all_records()
         participantes = []
@@ -85,18 +94,7 @@ class GoogleSheetsRepository(BaseRepository):
             if not any(r.values()):
                 continue
             nome = str(r.get("Nome", "")).strip()
-            telefone_raw = str(r.get("Telefone", "")).strip()
-            
-            # Limpa tudo que não for dígito numérico
-            telefone_limpo = "".join([c for c in telefone_raw if c.isdigit()])
-            
-            # Se a pessoa não preencheu 11 dígitos na planilha (ex: deixou em branco), 
-            # geramos um telefone falso válido (11 dígitos) baseado no hash do nome 
-            # para que o modelo Participante não falhe na validação.
-            if len(telefone_limpo) != 11:
-                # O admin usa 00000000000. Para outros, geramos um sufixo
-                sufixo = str(abs(hash(nome)))[:11]
-                telefone_limpo = sufixo.zfill(11)
+            telefone_limpo = self._obter_telefone_efetivo(r)
                 
             p = Participante(
                 nome=nome,
@@ -138,7 +136,7 @@ class GoogleSheetsRepository(BaseRepository):
     def update_participante(self, participante: Participante) -> None:
         registros = self._ws_participantes.get_all_records()
         for idx, r in enumerate(registros):
-            if str(r.get("Telefone", "")) == participante.telefone_limpo:
+            if self._obter_telefone_efetivo(r) == participante.telefone_limpo:
                 # idx é 0-based. A linha na planilha é idx + 2 (1 pro cabeçalho, +1 pq sheets é 1-based)
                 row_num = idx + 2
                 self._ws_participantes.update(f"A{row_num}:D{row_num}", [[
@@ -153,7 +151,7 @@ class GoogleSheetsRepository(BaseRepository):
     def update_participante_telefone(self, telefone_antigo: str, telefone_novo: str) -> None:
         registros = self._ws_participantes.get_all_records()
         for idx, r in enumerate(registros):
-            if str(r.get("Telefone", "")) == telefone_antigo:
+            if self._obter_telefone_efetivo(r) == telefone_antigo:
                 row_num = idx + 2
                 self._ws_participantes.update_cell(row_num, 2, telefone_novo) # Coluna B (2) = Telefone
                 return
@@ -162,7 +160,7 @@ class GoogleSheetsRepository(BaseRepository):
     def delete_participante(self, telefone: str) -> None:
         registros = self._ws_participantes.get_all_records()
         for idx in range(len(registros) - 1, -1, -1):
-            if str(registros[idx].get("Telefone", "")) == telefone:
+            if self._obter_telefone_efetivo(registros[idx]) == telefone:
                 row_num = idx + 2
                 self._ws_participantes.delete_rows(row_num)
                 return
